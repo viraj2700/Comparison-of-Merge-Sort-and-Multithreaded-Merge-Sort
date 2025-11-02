@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Merge Sort Comparison</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      color: #fff;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    h1 { margin-bottom: 20px; text-shadow: 1px 1px 2px #000; }
+    input {
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      margin-right: 10px;
+      width: 100px;
+      text-align: center;
+    }
+    button {
+      margin: 10px;
+      padding: 12px 25px;
+      font-size: 1em;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #fff;
+    }
+    .generate { background: #00bcd4; }
+    .normal { background: #4caf50; }
+    .threaded { background: #9c27b0; }
+    button:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(255,255,255,0.3); }
+    #result {
+      margin-top: 20px;
+      font-size: 1.2em;
+      background: rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+    canvas {
+      margin-top: 30px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 15px;
+      width: 90%;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Merge Sort vs Multithreaded Merge Sort</h1>
+
+  <div>
+    <input type="number" id="arraySize" placeholder="Enter size" min="10" max="100000">
+    <button class="generate" onclick="generateArray()">Generate Array</button>
+  </div>
+
+  <div>
+    <button class="normal" onclick="runSort('normal')">Run Merge Sort</button>
+    <button class="threaded" onclick="runSort('threaded')">Run Multithreaded Merge Sort</button>
+  </div>
+
+  <div id="result">Enter array size and click "Generate Array" to start.</div>
+
+  <canvas id="timeChart"></canvas>
+
+  <script>
+    let arr = [];
+    let results = { normal: null, threaded: null };
+
+    const ctx = document.getElementById('timeChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Merge Sort', 'Multithreaded Merge Sort'],
+        datasets: [{
+          label: 'Execution Time (ms)',
+          data: [0, 0],
+          backgroundColor: ['#4caf50', '#9c27b0']
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+
+    function generateArray() {
+      const size = parseInt(document.getElementById('arraySize').value);
+      if (!size || size <= 0) {
+        alert("⚠️ Please enter a valid array size.");
+        return;
+      }
+      arr = Array.from({ length: size }, () => Math.floor(Math.random() * 10000));
+      document.getElementById('result').innerText = `✅ Generated array with ${size} elements.`;
+      results = { normal: null, threaded: null };
+      chart.data.datasets[0].data = [0, 0];
+      chart.update();
+    }
+
+    async function runSort(type) {
+      if (arr.length === 0) {
+        alert("⚠️ Please generate the array first!");
+        return;
+      }
+      document.getElementById('result').innerText = "⏳ Sorting in progress...";
+      const res = await fetch('/sort', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ array: arr, type })
+      });
+      const data = await res.json();
+      results[type] = data.time;
+      document.getElementById('result').innerText = `${data.type} completed in ${data.time} ms.`;
+
+      if (results.normal && results.threaded) {
+        chart.data.datasets[0].data = [results.normal, results.threaded];
+        chart.update();
+      }
+    }
+  </script>
+</body>
+</html>
